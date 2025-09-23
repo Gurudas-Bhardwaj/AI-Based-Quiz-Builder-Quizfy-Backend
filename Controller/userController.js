@@ -1,0 +1,242 @@
+import { userModel } from "../Models/UserModel.js"
+import bcrypt from "bcrypt";
+import { generateAccessToken, generateRefreshToken } from "./Authentication/token.js";
+import jwt from "jsonwebtoken"
+
+export async function HandleSignUp(req, res) {
+    const { name, email, password, role } = req.body;
+
+    console.log(name, email, password, role);
+
+    //checking all field have data
+    if (!name || !email || !password || !role) return res.status(400).json({ Message: "Fill all fields!" });
+
+    //checking email end with valid syntax
+    if (!email.toLowerCase().endsWith('@gmail.com')) return res.status(400).json({ Message: "Enter a Valid Email" })
+
+    //check the user role is valid or not : 
+    const validRoles = ["admin", "user"];
+    if (!validRoles.includes(role.toLowerCase())) {
+        return res.status(400).json({ Message: "Invalid role selected!" });
+    }
+
+
+    //checking email is already used or not
+    const checkEmail = await userModel.findOne({ email });
+    if (checkEmail) return res.status(400).json({ Message: "Email Already used" })
+
+    //checking password is greater than 9 or not
+    if (password.length < 9) return res.status(400).json({ Message: "Password must be greater than 8 character!" })
+
+    //hashing the password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    //finally after all check user is registered and also added try catch to catching error`
+    try {
+        const val = await userModel.create({
+            name,
+            email,
+            password: hashedPassword,
+            role,
+        });
+        return res.status(201).json({ Message: "Registered Successfully" });
+    }
+    catch (err) {
+        console.error("DB Error:", err);
+        return res.status(500).json({ Message: "Something went wrong" });
+    }
+}
+
+export async function handleLogin(req, res) {
+    const { email, password } = req.body;
+
+    if (!email || !password) return res.status(400).json({ Message: "Fill all the fields" });//checking if any field is empty.
+    if (password.length < 9) return res.status(400).json({ Message: "Password is Invalid!" });//password must be greater than or eqaul to 8 digit.
+
+    //finding email existence : 
+    try {
+        //removing whitespaces from email :
+        const trimmedEmail = email.trim();
+        //finding email : 
+        const user = await userModel.findOne({ email: trimmedEmail });
+
+        if (!user) return res.status(404).json({ Message: "Email Not Found!" });
+
+        //comparing password : 
+        const isTrue = await bcrypt.compare(password, user.password);
+
+        if (!isTrue) return res.status(400).json({ Message: "Invalid Password!" });
+
+        //generating tokens : 
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+
+        //hence user is verified after all the steps now send him the success message and access and refresh token : 
+
+        //setting refresh token as http only cokkie for security purpose :  
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: false, // only over HTTPS
+            sameSite: "Lax",
+            maxAge: 20 * 24 * 60 * 60 * 1000, // 20 days
+        });
+
+        return res.status(202).json({
+            Message: "Successfully Logged in!",
+            "accessToken": accessToken,
+            "role" : user.role,
+        });
+
+    } catch (err) {
+        console.error("error : ", err);
+        res.status(400).json({ Message: "something went Wrong" });
+    }
+}
+
+export async function handleReGenerationAccessToken(req, res) {
+    const refreshToken = req.cookies?.refreshToken;
+    console.log(refreshToken, "From here");
+
+    if (!refreshToken) {
+        console.log("Token not Found");
+        return res.status(401).json({ Message: "Token not Found" });
+    }
+    try {
+        console.log(process.env.REFRESH_TOKEN_SECRET)
+        const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+        const user = await userModel.findById(payload.id);
+        console.log(user);
+
+        if (!user)
+            return res.status(404).json({ message: "User not found" });
+
+        const newAccessToken = generateAccessToken({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role : user.role, 
+        });
+
+        return res.status(200).json({ accessToken: newAccessToken });
+    } catch (err) {
+        console.log("Token Refresh Error");
+        return res.status(403).json({ Message: "Invalid or Expired Refresh Token" });
+    }
+}
+
+export async function handleLogout(req, res) {
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (!refreshToken) {
+        return res.status(204).json({ message: "No refresh token found" }); // No content to send back
+    }
+
+    res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: true,
+    });
+
+    return res.status(200).json({ message: "Logged out successfully" });
+}
+
+export async function handleDeleteUser(req, res) {
+    try {
+        const email = req.user.email;
+        const deleteUser = await userModel.findOneAndDelete({ email });
+
+        if (!deleteUser) return res.status(404).json({ Message: "User Not Found!" });
+
+        return res.status(200).json({ Message: "User Deleted Successfully!" });
+
+    } catch (err) {
+        console.error("error : ", err);
+        return res.status(500).json({ Message: "Internal Server Error!" });
+
+    }
+}
+
+export async function handleUpdateName(req, res) {
+    const { name } = req.body;
+    const email = req.user?.email;
+    const id = req.user?.id;
+
+    console.log("ghus gya hu")
+
+
+    if (!name) return res.status(404).json({ Message: "Please Provide A Input!" });
+
+    if (name.length <= 2) return res.status(400).json({ Message: "Enter a name with Atleast 2 Alphabet !" });
+
+    const regex = /[0-9!@#$%^&*(),.?":{}|<>_\-+=~`[\]\\;]/;
+    if (regex.test(name)) return res.status(400).json({ Message: "Enter a Valid Name" });
+
+    try {
+        const user = await userModel.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ Message: "User not found." });
+        }
+
+        console.log(user)
+
+        user.name = name;
+        await user.save();
+        console.log("aur ghus gya hu");
+        console.log(user);
+        console.log("return kr rha hu")
+        const newAccessToken = jwt.sign({ _id: user._id, name: user.name, email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
+
+        return res.status(200).json({
+            Message: "Name updated successfully!",
+            accessToken: newAccessToken
+        });
+    }
+    catch (err) {
+        console.log("error me ghus gya hu")
+        console.log("Error!", err);
+        return res.status(500).json({ Message: "Internal Server Error!" });
+    }
+}
+
+export async function updatePassword(req, res) {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const reqUser = req.user;
+    console.log(reqUser)
+    if (!reqUser) return res.status(404).json({ Message: "User Not Found!" });
+
+    console.log(newPassword, currentPassword, confirmPassword);
+    if (!currentPassword || !newPassword || !confirmPassword) return res.status(400).json({ Message: "Fill all the Fields!" });
+
+    if (newPassword.length < 9) return res.status(400).json({ Message: "New Password must be greater than 8 character!" });
+
+    if (newPassword != confirmPassword) return res.status(400).json({ Message: "Password Doesn't Match!" });
+
+
+    try {
+
+        const user = await userModel.findOne({ _id: reqUser.id });
+        console.log(user);
+
+        const isTrue = await bcrypt.compare(currentPassword, user.password);
+
+        if (!isTrue) return res.status(400).json({ Message: "Current Password is invalid!" });
+
+        const isSame = await bcrypt.compare(newPassword, user.password);
+
+        if (isSame) return res.status(400).json({ Message: "New Password is Same as Current Password!" });
+
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+        user.password = hashedPassword;
+        await user.save();
+
+        return res.status(200).json({ Message: "Password Updated Successfully!" });
+    }
+    catch (e) {
+        console.log("Error : ", e);
+        return res.status(500).json({ Message: "Internal Server Error" });
+    }
+
+}
