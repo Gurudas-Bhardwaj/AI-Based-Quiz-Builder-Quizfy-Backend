@@ -14,6 +14,31 @@ const presentationSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    addedAdmin : {
+        type : [
+            {
+                userId : {
+                    type : mongoose.Schema.Types.ObjectId,
+                    ref : "userModel",
+                    required : true,
+                },
+                userName : {
+                    type : String, 
+                    default : "User",
+                    required : true,
+                }, 
+                userGmail : {
+                    type : String, 
+                    required : true,
+                }, 
+                createdAt : {
+                    type : Date, 
+                    default : Date.now
+                }
+            }
+        ], 
+    default: [],
+    },
     createdAt: {
         type: Date,
         default: Date.now

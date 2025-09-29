@@ -83,46 +83,46 @@ export async function addQuestion(req, res) {
 //this section is for searching question and presentation
 
 //search presentations :
-  export async function GetPresentation(req, res) {
-    const { userId } = req.body;
-    const { page = 1, limit = 10 } = req.query; // default page=1, limit=10
-    console.log(userId);
+export async function GetPresentation(req, res) {
+  const { userId } = req.body;
+  const { page = 1, limit = 10 } = req.query; // default page=1, limit=10
+  console.log(userId);
 
-    if (!userId) {
-      return res.status(404).json({ Message: "Please provide user id!" });
-    }
-
-    try {
-      const user = await userModel.findById(userId);
-      console.log(user);
-      if (!user) {
-        return res.status(404).json({ Message: "User id is not correct!" });
-      }
-
-      const skip = (page - 1) * limit;  
-
-      const totalPresentations = await presentationModel.countDocuments({ user: userId });
-      const presentations = await presentationModel
-        .find({ user: userId })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .sort({ createdAt: -1 }); // latest first
-
-      if (!presentations || presentations.length === 0) {
-        return res.status(404).json({ Message: "Presentation not created yet please create first" });
-      }
-
-      return res.status(200).json({
-        Message: "Presentation found",
-        presentations,
-        totalPages: Math.ceil(totalPresentations / limit),
-        currentPage: parseInt(page),
-      });
-    } catch (e) {
-      console.error(e);
-      return res.status(500).json({ Message: "Internal server Error" });
-    }
+  if (!userId) {
+    return res.status(404).json({ Message: "Please provide user id!" });
   }
+
+  try {
+    const user = await userModel.findById(userId);
+    console.log(user);
+    if (!user) {
+      return res.status(404).json({ Message: "User id is not correct!" });
+    }
+
+    const skip = (page - 1) * limit;
+
+    const totalPresentations = await presentationModel.countDocuments({ user: userId });
+    const presentations = await presentationModel
+      .find({ user: userId })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 }); // latest first
+
+    if (!presentations || presentations.length === 0) {
+      return res.status(404).json({ Message: "Presentation not created yet please create first" });
+    }
+
+    return res.status(200).json({
+      Message: "Presentation found",
+      presentations,
+      totalPages: Math.ceil(totalPresentations / limit),
+      currentPage: parseInt(page),
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ Message: "Internal server Error" });
+  }
+}
 
 
 
@@ -131,14 +131,14 @@ export async function addQuestion(req, res) {
 export async function searchQuestion(req, res) {
   const { presentationId } = req.body;
 
-  if (!presentationId ) return res.status(400).json({ Message: "Provide all Details!" });
+  if (!presentationId) return res.status(400).json({ Message: "Provide all Details!" });
 
   try {
     const presentation = await presentationModel.findById(presentationId);
 
     if (!presentation) return res.status(404).json({ Message: "Presentation not Found!" });
 
-    const question = await questionModel.find({presentation : presentationId});
+    const question = await questionModel.find({ presentation: presentationId });
 
     if (!question) return res.status(404).json({ Message: "Question not found" });
 
@@ -239,44 +239,230 @@ export async function updateOptionText(req, res) {
   }
 }
 
-export const updatePresentationName = async(req, res)=>{
-  const {presentationId, presentationName} = req.body;
+export const updatePresentationName = async (req, res) => {
+  const { presentationId, presentationName } = req.body;
 
-  if(!presentationId || !presentationName) return res.status(404).json({Message : "Please provide all thing"});
+  if (!presentationId || !presentationName) return res.status(404).json({ Message: "Please provide all thing" });
 
-  try{
+  try {
     const presentation = await presentationModel.findById(presentationId);
-    if(!presentation) return res.status(404).json({Message : "Presentation not found!"});
+    if (!presentation) return res.status(404).json({ Message: "Presentation not found!" });
 
     presentation.title = presentationName;
     await presentation.save();
 
-    return res.status(200).json({Message : "Updated Successfully", presentation})
+    return res.status(200).json({ Message: "Updated Successfully", presentation })
   }
-  catch(e){
-    return res.status(500).json({Message : "Internal Server Error"});
+  catch (e) {
+    return res.status(500).json({ Message: "Internal Server Error" });
   }
 }
 
 
 //This is for deleting presentation and question related to presentation 
 
-export const deletePresenation = async(req, res)=>{
-  const {presentationId} = req.body;
+export const deletePresenation = async (req, res) => {
+  const { presentationId } = req.body;
 
-  if(!presentationId) return res.status(404).json({Message : "Please Provide Presenation Id !"});
+  if (!presentationId) return res.status(404).json({ Message: "Please Provide Presenation Id !" });
 
-  try{
+  try {
 
     const presentation = await presentationModel.findByIdAndDelete(presentationId);
     if (presentation)
       await questionModel.deleteMany({ presentation: presentationId });
-    
-    return res.status(200).json({Message : "Deleted Successfully!"})
-    
+
+    return res.status(200).json({ Message: "Deleted Successfully!" })
+
 
   }
-  catch(e){
+  catch (e) {
     console.log("error : ", e);
   }
 }
+
+
+
+//this is for deleting options ; 
+export const deleteOptions = async (req, res) => {
+  const { questionId } = req.params;
+  const { optionId } = req.body;
+
+  if (!questionId || !optionId)
+    return res.status(404).json({ message: "All fields are required !" });
+
+  try {
+    const question = await questionModel.findById(questionId);
+
+    if (!question)
+      return res.status(404).json({ message: "question not found!" });
+
+    if (question.options.length <= 3)
+      return res.status(400).json({ message: "Minimum 3 option you can have!" })
+
+    question.options = question.options.filter((s) => s._id.toString() !== optionId);
+
+    await question.save();
+
+
+    return res.status(200).json({ Message: "Successfully Deleted!", question });
+
+
+  } catch (e) {
+    console.error("Error deleting option:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
+//this is for adding options : 
+export const addOption = async (req, res) => {
+  const { questionId } = req.params;
+
+  if (!questionId)
+    return res.status(404).json({ message: "Question Id is not found! " });
+
+  try {
+    const question = await questionModel.findById(questionId);
+
+    if (!question)
+      return res.status(404).json({ message: "Presentation Not found!" });
+
+    if (question.options.length >= 5)
+      return res.status(400).json({ message: "Can't add more than 5 options!" })
+
+    const newOption = {
+      text: "new Option",
+      color: "#186DDC",
+      votes: 0
+    }
+
+    question.options.push(newOption);
+    await question.save();
+
+
+    return res.json({ message: "Updated Successfully", question });
+
+  } catch (e) {
+    console.log("error : ", e);
+    return res.status(500).json({ Message: "Error" });
+  }
+}
+
+export const changeTemplate = async (req, res) => {
+  const { questionId, newDesignTemplate } = req.body;
+
+  if (!questionId || !newDesignTemplate)
+    return res.status(404).json({ message: "Please provide neccessary things!" });
+
+  try {
+    const question = await questionModel.findById(questionId);
+
+    if (!question)
+      return res.status(404).json({ message: "Question not Found!" });
+
+    question.designTemplate = newDesignTemplate;
+    await question.save();
+
+    return res.status(200).json({ message: "Update Successfully", question });
+  }
+  catch (e) {
+    console.log("error in changing template!");
+    return res.status(500).json({ message: "Error" });
+  }
+}
+
+export const AddAdmin = async (req, res) => {
+  const { userGmail, presentationId } = req.body;
+
+  if (!userGmail || !presentationId) {
+    return res.status(400).json({ message: "Please provide both userGmail and presentationId" });
+  }
+
+  try {
+    // 1. Find the user by email
+    const user = await userModel.findOne({ email: userGmail });
+
+
+    console.log("Founded : ", user);
+    if (!user) {
+      return res.status(404).json({ message: "User not found for the Given Email" });
+    }
+
+    // 2. Find the presentation by its ID
+    const presentation = await presentationModel.findById(presentationId);
+
+    if (!presentation) {
+      return res.status(404).json({ message: "Presentation Not found!" });
+    }
+
+
+    // 3. Create the admin object
+    const admin = {
+      userId: user._id, // Use the user's _id (ObjectId)
+      userName: user.name || "User", // If name is missing, fallback to "User"
+      userGmail: user.email, // Use the email from the user document
+      createdAt: new Date(), // Set the current time as creation time
+    };
+
+    if (String(presentation.user) === String(admin.userId)) {
+      console.log("User is already the owner of the presentation");
+      return res.status(405).json({ message: "User is already the owner of the presentation" });
+    }
+
+    const adminExists = presentation.addedAdmin.some(admin => String(admin.userId) === String(user._id));
+    if (adminExists) {
+      console.log("User is already an admin");
+      return res.status(405).json({ message: "User is already an admin of this presentation" });
+    }
+
+    // 4. Push the admin object into the addedAdmin array
+    presentation.addedAdmin.push(admin);
+
+    console.log("Presentation before saving:", presentation);
+    await presentation.save();
+
+
+    return res.status(200).json({ message: "Admin Added Successfully", presentation });
+  } catch (e) {
+    console.error("Error while adding admin:", e);
+    return res.status(500).json({ message: "Error while adding admin!" });
+  }
+};
+
+
+export const deleteAddedAdmin = async (req, res) => {
+  const { presentationId, userId } = req.body;
+
+  if (!presentationId || !userId) {
+    return res.status(400).json({ message: "Please provide all the necessary information!" });
+  }
+
+  try {
+    // Check if the presentation exists
+    const presentation = await presentationModel.findById(presentationId);
+    console.log(presentation)
+
+    if (!presentation) {
+      return res.status(404).json({ message: "Presentation not found!" });
+    }
+
+    // Filter out the admin from the addedAdmin array
+    const initialAdminCount = presentation.addedAdmin.length;
+    presentation.addedAdmin = presentation.addedAdmin.filter(
+      (admin) => admin.userId.toString() !== userId.toString()
+    );
+
+    // If no admin was removed, inform the user
+    if (presentation.addedAdmin.length === initialAdminCount) {
+      return res.status(404).json({ message: "Admin not found in the presentation!" });
+    }
+
+    // Save the updated presentation
+    await presentation.save();
+
+    return res.status(200).json({ message: "Admin successfully deleted!", presentation });
+  } catch (e) {
+    console.error("Error deleting added admin:", e);
+    return res.status(500).json({ message: "An error occurred while deleting the admin!" });
+  }
+};

@@ -23,7 +23,8 @@ const questionSchema = new mongoose.Schema({
             {
                 text: { type: String, default : "" },
                 color: { type: String, default: "#000000" }, 
-                votes: { type: Number, default: 0 }
+                votes: { type: Number, default: 0 },
+                answer : {type : Boolean, default : false},
             }
         ],
         default: undefined,
