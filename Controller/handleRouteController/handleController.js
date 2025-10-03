@@ -1,7 +1,8 @@
 import { presentationModel } from "../../Models/Presentation/PresentationModels.js"
 import { questionModel } from "../../Models/Presentation/Question/QuestionModel.js"
 import { userModel } from "../../Models/UserModel.js";
-
+import fs from "fs";
+import path from "path";
 
 
 
@@ -29,6 +30,24 @@ export async function createPresentation(req, res) {
   } catch (e) {
     console.log("Error : ", e);
     return res.status(500).json({ Message: "Internal Server Error!" });
+  }
+}
+
+export const deleteSlide = async (req, res) => {
+  const { questionId } = req.body;
+
+  if (!questionId)
+    return res.status(404).json({ message: "Question Id not found! " });
+
+  try {
+    const question = await questionModel.findByIdAndDelete(questionId);
+    if (!question)
+      return res.status(404).json({ message: "Slide not Found" });
+
+    return res.status(200).json({ message: "Successfully Deleted!" });
+  } catch (e) {
+    console.log("Error when deleting the slide : ", e);
+    return res.status(500).json({ message: "unexpected Error Occured!" });
   }
 }
 
@@ -258,6 +277,65 @@ export const updatePresentationName = async (req, res) => {
   }
 }
 
+export const updateQuestionImage = async (req, res) => {
+  const { questionId } = req.body;
+
+  if (!questionId)
+    return res.status(404).json({ message: "Question ID not found!" });
+
+  if (!req.file) {
+    return res.status(404).json({ message: "Image file not found!" })
+  }
+
+  try {
+    const question = await questionModel.findById(questionId);
+    if (!question)
+      return res.status(404).json({ message: "Question not found!" });
+
+
+    question.Image = `http://localhost:9000/uploads/${req.file.filename}`;
+    await question.save();
+
+    return res.status(200).json({ messsage: "Image uploaded Successfully!", question });
+  }
+  catch (e) {
+    console.log("Error while saving image : ", e);
+    return res.status(500).json({ message: "Unexepected Error occured!" });
+  }
+}
+
+export const deleteQuestionImage = async (req, res) => {
+  const { questionId } = req.body;
+
+  if (!questionId)
+    return res.status(404).json({ message: "Question Id is not defined! " });
+
+
+  try {
+    const question = await questionModel.findById(questionId);
+    if (!question)
+      return res.status(404).json({ message: "Question not Found!" });
+
+    if (question.Image == null)
+      return res.status(200).json({ message: "Image Deleted Successfully!" });
+
+    if (question.Image) {
+      const filePath = path.join("upload", question.Image.replace("http://localhost:9000/", ""));
+      if (fs.existsSync(filePath))
+        fs.unlinkSycn(filePath);
+    }
+
+    question.Image = null;
+    await question.save();
+
+    return res.status(200).json({ message: "Image deleted Successfully!" });
+  }
+  catch (e) {
+    console.log("Error while deleting image!");
+    return res.status(500).json({ message: "Error while deleting image" });
+  }
+}
+
 
 //This is for deleting presentation and question related to presentation 
 
@@ -347,6 +425,40 @@ export const addOption = async (req, res) => {
     return res.status(500).json({ Message: "Error" });
   }
 }
+
+export const addCorrectOption = async (req, res) => {
+  const { questionId, optionId } = req.body;
+
+  if (!questionId || !optionId)
+    return res.status(404).json({ message: "Please Provide fields! " });
+
+  try {
+    const question = await questionModel.findById(questionId);
+    if (!question)
+      return res.status(404).json({ message: "Question not Found" });
+
+    const option = question.options.id(optionId);
+
+    if (!option)
+      return res.status.json({ message: "Option doesn't found! " });
+
+    option.answer = true;
+
+    question.options.forEach(opt => {
+      if (opt._id.toString() !== optionId) {
+        opt.answer = false;
+      }
+    });
+
+    await question.save();
+
+    return res.status(200).json({ message: "Correct option set successfully.", question });
+  }
+  catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "Internal server error.", error: e.message });
+  }
+};
 
 export const changeTemplate = async (req, res) => {
   const { questionId, newDesignTemplate } = req.body;
@@ -466,3 +578,29 @@ export const deleteAddedAdmin = async (req, res) => {
     return res.status(500).json({ message: "An error occurred while deleting the admin!" });
   }
 };
+
+
+export const addDescription = async (req, res) => {
+  const { questionId, description } = req.body;
+  console.log(questionId, description)
+
+  if (!questionId || !description)
+    return res.status(404).json({ message: "Please Provide all the things! " });
+
+  try {
+    const question = await questionModel.findById(questionId);
+
+    if (!question) {
+      return res.status(404).json({ message: "Question not found!" });
+    }
+
+    question.description = description;
+    await question.save();
+
+    return res.status(200).json({ message: "Description saved successfully!", question });
+  }
+  catch (e) {
+    console.log("error while saving description!", e);
+    return res.status(500).json({ message: "Error while saving description!" });
+  }
+}

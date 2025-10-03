@@ -9,6 +9,7 @@ import {handleRouter} from "./Router/handleRoute.js"
 import {initSocket} from './Socket/SocketInstance.js' 
 
 import dotenv from 'dotenv';
+import path from "path";
 dotenv.config({ path: '.././secret.env' });
 
 
@@ -22,6 +23,7 @@ app.use(cookieParser());
 
 app.use(express.urlencoded({extended : false}));
 app.use(express.json());
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 const server = http.createServer(app);
 

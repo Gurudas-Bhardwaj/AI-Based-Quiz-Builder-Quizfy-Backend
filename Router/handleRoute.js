@@ -1,6 +1,7 @@
 import express from "express"
-import {createPresentation, addQuestion, searchQuestion, GetPresentation, updatePresentationName, deletePresenation, updateOptionColor, updateOptionText, updateQuestion, deleteOptions, addOption, changeTemplate, AddAdmin, deleteAddedAdmin} from "../Controller/handleRouteController/handleController.js"
+import {createPresentation, addQuestion, searchQuestion, GetPresentation, updatePresentationName, deletePresenation, updateOptionColor, updateOptionText, updateQuestion, deleteOptions, addOption, changeTemplate, AddAdmin, deleteAddedAdmin, updateQuestionImage, addDescription, addCorrectOption, deleteQuestionImage, deleteSlide} from "../Controller/handleRouteController/handleController.js"
 import {checkRole} from "../MiddleWare/requiredRole.js"
+import { upload } from "../Config/multer.js";
 
 const handleRouter = express.Router();
 
@@ -8,12 +9,34 @@ const handleRouter = express.Router();
 
 handleRouter.post("/createPresentation",createPresentation);
 handleRouter.post("/addQuestion" ,addQuestion);
+handleRouter.delete("/deleteSlide", deleteSlide);
 
 handleRouter.patch("/questions/:questionId/editQuestion", updateQuestion); //updating questions
 handleRouter.patch("/questions/:questionId/options/:optionIndex/color" ,updateOptionColor); //for updating options color
 handleRouter.patch("/questions/:questionId/options",updateOptionText); // for updating options text
 handleRouter.post("/question/:questionId/deleteOption", deleteOptions);
 handleRouter.post("/question/:questionId/addOption", addOption);
+handleRouter.post("/question/description", addDescription);
+handleRouter.post("/question/correctOption", addCorrectOption);
+
+handleRouter.post("/uploadImage", (req, res) => {
+  upload.single("image")(req, res, (err) => {
+    if (err) {
+      // Multer fileFilter error
+      try {
+        const parsed = JSON.parse(err.message); // our JSON error
+        return res.status(400).json(parsed);
+      } catch {
+        return res.status(400).json({ Message: err.message });
+      }
+    }
+
+    // If no error, continue
+    updateQuestionImage(req, res);
+  });
+});
+handleRouter.delete("/deleteImage", deleteQuestionImage)
+
 
 handleRouter.patch("/presentation/editTitle" , updatePresentationName);
 

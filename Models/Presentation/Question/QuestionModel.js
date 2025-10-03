@@ -29,9 +29,17 @@ const questionSchema = new mongoose.Schema({
         ],
         default: undefined,
     },
+    Image : {
+        type : String,
+        default : null,
+    },
     isLive: {
         type: Boolean,
         default: false,
+    },
+    description : {
+        type : String, 
+        default : undefined,
     },
 
     createdAt: {

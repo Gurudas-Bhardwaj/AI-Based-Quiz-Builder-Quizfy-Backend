@@ -75,11 +75,14 @@ export const adminControlledQuizHandler = (io, socket) => {
                                 _id: q._id,
                                 question: q.question,
                                 designType: q.designType,
+                                Image : q.Image,
                                 designTemplate: q.designTemplate,
+                                description : q.description,
                                 options: q.options.map((o, optIdx) => ({
                                     _id: o._id,
                                     text: o.text,
                                     color: o.color,
+                                    answer : o.answer,
                                     votes: (currentQuestion.options && currentQuestion.options[optIdx] && currentQuestion.options[optIdx].votes) || 0,
                                 })),
                                 votes: currentQuestion.votes || {},
@@ -91,8 +94,10 @@ export const adminControlledQuizHandler = (io, socket) => {
                                 _id: q._id,
                                 question: q.question,
                                 designType: q.designType,
+                                Image : q.Image,
+                                description : q.description,
                                 designTemplate: q.designTemplate,
-                                options: q.options.map(o => ({ _id: o._id, text: o.text, color: o.color, votes: 0 })),
+                                options: q.options.map(o => ({ _id: o._id, text: o.text, color: o.color, votes: 0, answer : o.answer })),
                                 votes: {},
                             };
                         }
@@ -114,8 +119,10 @@ export const adminControlledQuizHandler = (io, socket) => {
                     _id: first._id,
                     question: first.question,
                     designType: first.designType,
+                    Image : first.Image,
+                    description : first.description,
                     designTemplate: first.designTemplate,
-                    options: first.options.map((o) => ({ _id: o._id, text: o.text, color: o.color, votes: 0 })),
+                    options: first.options.map((o) => ({ _id: o._id, text: o.text, color: o.color, votes: 0, answer : o.answer })),
                     isLive: first.isLive,
                     votes: {}, // map userId -> optionIndex
                 };
@@ -126,8 +133,10 @@ export const adminControlledQuizHandler = (io, socket) => {
                     _id: q._id,
                     question: q.question,
                     designType: q.designType,
+                    Image : q.Image,
+                    description : q.description,
                     designTemplate: q.designTemplate,
-                    options: q.options.map(o => ({ _id: o._id, text: o.text, color: o.color, votes: 0 })),
+                    options: q.options.map(o => ({ _id: o._id, text: o.text, color: o.color, votes: 0, answer : o.answer })),
                     votes: {},
                 }));
 
@@ -144,7 +153,7 @@ export const adminControlledQuizHandler = (io, socket) => {
                         questionId: q._id,
                         text: q.question,
                         type: q.designType,
-                        options: q.options.map((o) => ({ text: o.text, color: o.color })),
+                        options: q.options.map((o) => ({ text: o.text, color: o.color, answer : o.answer })),
                     })),
                     results: [],
                 });
