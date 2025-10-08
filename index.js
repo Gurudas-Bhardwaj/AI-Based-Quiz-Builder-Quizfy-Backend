@@ -10,7 +10,7 @@ import {initSocket} from './Socket/SocketInstance.js'
 
 import dotenv from 'dotenv';
 import path from "path";
-dotenv.config({ path: '.././secret.env' });
+dotenv.config();
 
 
 const app = express();
