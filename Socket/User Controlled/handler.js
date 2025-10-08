@@ -1,25 +1,49 @@
 import { CommentModel } from "../../Models/Presentation/Comment.js";
+import { presentationModel } from "../../Models/Presentation/PresentationModels.js";
 import { questionModel } from "../../Models/Presentation/Question/QuestionModel.js";
 import redis from "../../redis/redisClient.js";
-
+import jwt from "jsonwebtoken";
 
 export const userControlledQuizHandler = async (io, socket) => {
     //--------------------------User Controlled Quiz starts frm here ----------------------//
     //-------------------------1st handler Function-------------------------------//
     //this basically handles the intial connection......
 
-    socket.on("joinQuizByAdmin", async ({ presentationId }) => {
+    socket.on("joinQuizByAdmin", async ({ presentationId, accessToken }) => {
         try {
-            if (!presentationId) {
-                socket.emit("error", { message: "Presentation ID is not given!" });
+            if (!presentationId || !accessToken) {
+                socket.emit("error", { message: "Presentation ID or Access Token is not given!" });
+                return;
+            }
+            console.log(accessToken," From join quiz By Admin")
+            const decodedToken = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+
+            if (!decodedToken) {
+                return res.status(401).json({ message: "Invalid Token!" });
+            }
+
+            const { id } = decodedToken;
+
+            const presentation = await presentationModel.findById(presentationId);
+            if (!presentation) {
+                socket.emit("error", { message: "Presentation not found!" });
                 return;
             }
 
-            socket.join(presentationId);
+            const isOwner = presentation.user == id;
+            const isAddedAdmin = presentation.addedAdmin.find(user => user.userId == id);
+
+
+            if (!isOwner && !isAddedAdmin) {
+                socket.emit("unauthorized", { message: "You are not the Admin!" });
+                return;
+            }
+
             //sending the details for participants to admin : 
             const participantKey = `quiz:${presentationId}:Participants`;
             const allParticipantsObj = await redis.hgetall(participantKey);
 
+            socket.join(presentationId);
             const participants = Object.values(allParticipantsObj).map((s) => JSON.parse(s));
 
             if (participants && participants.length > 0) {
@@ -256,13 +280,35 @@ export const userControlledQuizHandler = async (io, socket) => {
     //-------------------------------1st handler-----------------------------------//
     //handles when user connects intially : 
 
-    socket.on("quizJoinedByUser", async ({ presentationId, userId, userName }) => {
+    socket.on("quizJoinedByUser", async ({ presentationId, userId, userName, accessToken }) => {
 
         if (!presentationId) {
             socket.emit("error", { message: "presentation Id not Found!" })
             return;
         }
 
+        const decodedToken = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+
+        if(!decodedToken){
+            socket.emit("error", { message: "Invalid Token!" });
+            return;
+        }
+
+        const { id } = decodedToken;
+
+        const presentation = await presentationModel.findById(presentationId);
+        if (!presentation) {
+            socket.emit("error", { message: "Presentation not found!" });
+            return;
+        }
+
+        if(presentation.user == id){
+            return socket.emit("unauthorized", { message: "You are and Admin! You can't join as a participant." });
+        }
+
+        if(presentation.addedAdmin.find(admin => admin.userId == id)){
+            return socket.emit("unauthorized", { message: "You are an Admin! You can't join as a participant." });
+        }
         //--------------Participants List -----------------------//
         //adding Participant to the current quiz :
         const participantKey = `quiz:${presentationId}:Participants`;
@@ -274,7 +320,7 @@ export const userControlledQuizHandler = async (io, socket) => {
         //giving admin the list of participant after a new entry being made : 
         const allParticipantsObj = await redis.hgetall(participantKey);
         const participants = Object.values(allParticipantsObj).map((r) => JSON.parse(r));
-
+ 
         io.of("/userControlledQuiz").to(presentationId).emit("participantsUpdate", { participants });
 
 
@@ -320,6 +366,6 @@ export const userControlledQuizHandler = async (io, socket) => {
         const allParticipantsObj = await redis.hgetall(participantKey);
         const participants = Object.values(allParticipantsObj).map((p) => JSON.parse(p));
 
-        io.of("/userControlledQuiz").to(presentationId).emit("participantsUpdateLeft", { participants});
+        io.of("/userControlledQuiz").to(presentationId).emit("participantsUpdateLeft", { participants });
     });
 } 

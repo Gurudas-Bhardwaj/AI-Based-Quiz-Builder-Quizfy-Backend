@@ -29,9 +29,9 @@ const server = http.createServer(app);
 
 initSocket(server);
 
-connection("mongodb://127.0.0.1:27017/Quiz")
-.then(()=>console.log("Connected Successfully!"))
-.catch((err)=>console.log("Error : ",err))
+connection("mongodb+srv://Gurudas_9811:Radhasoami9811@quizfycluster.odpmhss.mongodb.net/Quiz?retryWrites=true&w=majority&appName=QuizfyCluster")
+  .then(() => console.log("Connected Successfully!"))
+  .catch((err) => console.log("Error: ", err));
 
 
 app.use("/user/",userRouter);

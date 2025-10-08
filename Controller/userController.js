@@ -4,21 +4,17 @@ import { generateAccessToken, generateRefreshToken } from "./Authentication/toke
 import jwt from "jsonwebtoken"
 
 export async function HandleSignUp(req, res) {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
-    console.log(name, email, password, role);
+    console.log(name, email, password);
 
     //checking all field have data
-    if (!name || !email || !password || !role) return res.status(400).json({ Message: "Fill all fields!" });
+    if (!name || !email || !password ) return res.status(400).json({ Message: "Fill all fields!" });
 
     //checking email end with valid syntax
     if (!email.toLowerCase().endsWith('@gmail.com')) return res.status(400).json({ Message: "Enter a Valid Email" })
 
     //check the user role is valid or not : 
-    const validRoles = ["admin", "user"];
-    if (!validRoles.includes(role.toLowerCase())) {
-        return res.status(400).json({ Message: "Invalid role selected!" });
-    }
 
 
     //checking email is already used or not
@@ -38,7 +34,6 @@ export async function HandleSignUp(req, res) {
             name,
             email,
             password: hashedPassword,
-            role,
         });
         return res.status(201).json({ Message: "Registered Successfully" });
     }
@@ -85,7 +80,6 @@ export async function handleLogin(req, res) {
         return res.status(202).json({
             Message: "Successfully Logged in!",
             "accessToken": accessToken,
-            "role" : user.role,
         });
 
     } catch (err) {
@@ -116,7 +110,6 @@ export async function handleReGenerationAccessToken(req, res) {
             _id: user._id,
             name: user.name,
             email: user.email,
-            role : user.role, 
         });
 
         return res.status(200).json({ accessToken: newAccessToken });
@@ -210,7 +203,7 @@ export async function updatePassword(req, res) {
 
     if (newPassword.length < 9) return res.status(400).json({ Message: "New Password must be greater than 8 character!" });
 
-    if (newPassword != confirmPassword) return res.status(400).json({ Message: "Password Doesn't Match!" });
+    if (newPassword != confirmPassword) return res.status(400).json({ Message: "New Password and Confirm Password Doesn't Match!" });
 
 
     try {

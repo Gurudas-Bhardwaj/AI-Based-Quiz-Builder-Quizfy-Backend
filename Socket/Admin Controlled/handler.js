@@ -4,30 +4,48 @@ import questionResponses from "../../Models/Presentation/questionResponses.js";
 import Session from "../../Models/Presentation/Session.js";
 import { questionModel } from "../../Models/Presentation/Question/QuestionModel.js";
 import { CommentModel } from "../../Models/Presentation/Comment.js";
+import jwt, { decode } from "jsonwebtoken";
 
 
 export const adminControlledQuizHandler = (io, socket) => {
-
 
     //----------------------------------------Admin Events-------------------------------------------//
     //-----------------------------Admin Function starts From here----------------------------------//
 
     //--------------------------------Connection of Admin------------------------------------------//
-    socket.on("joinQuizByAdmin", async ({ presentationId }) => {
+    socket.on("joinQuizByAdmin", async ({ presentationId, accessToken }) => {
         try {
-            if (!presentationId) {
-                socket.emit("error", { message: "presentationId is required" });
+            if (!presentationId || !accessToken) {
+                socket.emit("error", { message: "presentationId or accessToken are required" });
                 return;
             }
 
-            socket.join(presentationId);
-            console.log(`✅ Admin joined room ${presentationId} (socket ${socket.id})`);
+            const decodedToken = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+
+            if (!decodedToken) {
+                return res.status(401).json({ message: "Invalid Token!" });
+            }
+
+            const { id } = decodedToken;
 
             const presentation = await presentationModel.findById(presentationId);
             if (!presentation) {
                 socket.emit("error", { message: "Presentation not found!" });
                 return;
             }
+
+            const isOwner = presentation.user == id;
+            const isAddedAdmin = presentation.addedAdmin.find(user => user.userId == id);
+
+
+            if (!isOwner && !isAddedAdmin) {
+                socket.emit("unauthorized", { message: "You are not the Admin!" });
+                return;
+            }
+
+
+            socket.join(presentationId);
+            console.log(`✅ Admin joined room ${presentationId} (socket ${socket.id})`);
 
             const questions = await questionModel.find({ presentation: presentation._id }).sort({ order: 1 });
             if (!questions.length) {
@@ -75,14 +93,14 @@ export const adminControlledQuizHandler = (io, socket) => {
                                 _id: q._id,
                                 question: q.question,
                                 designType: q.designType,
-                                Image : q.Image,
+                                Image: q.Image,
                                 designTemplate: q.designTemplate,
-                                description : q.description,
+                                description: q.description,
                                 options: q.options.map((o, optIdx) => ({
                                     _id: o._id,
                                     text: o.text,
                                     color: o.color,
-                                    answer : o.answer,
+                                    answer: o.answer,
                                     votes: (currentQuestion.options && currentQuestion.options[optIdx] && currentQuestion.options[optIdx].votes) || 0,
                                 })),
                                 votes: currentQuestion.votes || {},
@@ -94,10 +112,10 @@ export const adminControlledQuizHandler = (io, socket) => {
                                 _id: q._id,
                                 question: q.question,
                                 designType: q.designType,
-                                Image : q.Image,
-                                description : q.description,
+                                Image: q.Image,
+                                description: q.description,
                                 designTemplate: q.designTemplate,
-                                options: q.options.map(o => ({ _id: o._id, text: o.text, color: o.color, votes: 0, answer : o.answer })),
+                                options: q.options.map(o => ({ _id: o._id, text: o.text, color: o.color, votes: 0, answer: o.answer })),
                                 votes: {},
                             };
                         }
@@ -119,10 +137,10 @@ export const adminControlledQuizHandler = (io, socket) => {
                     _id: first._id,
                     question: first.question,
                     designType: first.designType,
-                    Image : first.Image,
-                    description : first.description,
+                    Image: first.Image,
+                    description: first.description,
                     designTemplate: first.designTemplate,
-                    options: first.options.map((o) => ({ _id: o._id, text: o.text, color: o.color, votes: 0, answer : o.answer })),
+                    options: first.options.map((o) => ({ _id: o._id, text: o.text, color: o.color, votes: 0, answer: o.answer })),
                     isLive: first.isLive,
                     votes: {}, // map userId -> optionIndex
                 };
@@ -133,10 +151,10 @@ export const adminControlledQuizHandler = (io, socket) => {
                     _id: q._id,
                     question: q.question,
                     designType: q.designType,
-                    Image : q.Image,
-                    description : q.description,
+                    Image: q.Image,
+                    description: q.description,
                     designTemplate: q.designTemplate,
-                    options: q.options.map(o => ({ _id: o._id, text: o.text, color: o.color, votes: 0, answer : o.answer })),
+                    options: q.options.map(o => ({ _id: o._id, text: o.text, color: o.color, votes: 0, answer: o.answer })),
                     votes: {},
                 }));
 
@@ -153,7 +171,7 @@ export const adminControlledQuizHandler = (io, socket) => {
                         questionId: q._id,
                         text: q.question,
                         type: q.designType,
-                        options: q.options.map((o) => ({ text: o.text, color: o.color, answer : o.answer })),
+                        options: q.options.map((o) => ({ text: o.text, color: o.color, answer: o.answer })),
                     })),
                     results: [],
                 });
@@ -171,8 +189,37 @@ export const adminControlledQuizHandler = (io, socket) => {
 
 
     // ----------------- nextQuestion handler -------------------------------//
-    socket.on("nextQuestion", async ({ presentationId }) => {
+    socket.on("nextQuestion", async ({ presentationId, accessToken }) => {
         try {
+
+            if (!presentationId || !accessToken) {
+                socket.emit("error", { message: "presentationId or accessToken are required" });
+                return;
+            }
+
+            const decodedToken = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+
+            if (!decodedToken) {
+                return res.status(401).json({ message: "Invalid Token!" });
+            }
+
+            const { id } = decodedToken;
+
+            const presentation = await presentationModel.findById(presentationId);
+            if (!presentation) {
+                socket.emit("error", { message: "Presentation not found!" });
+                return;
+            }
+
+            const isOwner = presentation.user == id;
+            const isAddedAdmin = presentation.addedAdmin.find(user => user.userId == id);
+
+            if (!isOwner && !isAddedAdmin) {
+                socket.emit("unauthorized", { message: "You are not the Admin!" });
+                return;
+            }
+
+
             const sessionKey = `quiz:${presentationId}`;
             const questionsStateStr = await redis.hget(sessionKey, "questionsState");
             const currentIndexStr = await redis.hget(sessionKey, "currentIndex");
@@ -242,8 +289,36 @@ export const adminControlledQuizHandler = (io, socket) => {
 
     //------------------------------------3rd Handler----------------------------------//
     //---------------------------------Previous Question-------------------------------//
-    socket.on("previousQuestion", async ({ presentationId }) => {
+    socket.on("previousQuestion", async ({ presentationId, accessToken }) => {
         try {
+
+            if (!presentationId || !accessToken) {
+                socket.emit("error", { message: "presentationId or accessToken are required" });
+                return;
+            }
+
+            const decodedToken = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+
+            if (!decodedToken) {
+                return res.status(401).json({ message: "Invalid Token!" });
+            }
+
+            const { id } = decodedToken;
+
+            const presentation = await presentationModel.findById(presentationId);
+            if (!presentation) {
+                socket.emit("error", { message: "Presentation not found!" });
+                return;
+            }
+
+            const isOwner = presentation.user == id;
+            const isAddedAdmin = presentation.addedAdmin.find(user => user.userId == id);
+
+            if (!isOwner && !isAddedAdmin) {
+                socket.emit("unauthorized", { message: "You are not the Admin!" });
+                return;
+            }
+
             const sessionKey = `quiz:${presentationId}`;
             const questionsStateStr = await redis.hget(sessionKey, "questionsState");
             const currentIndexStr = await redis.hget(sessionKey, "currentIndex");
@@ -436,75 +511,104 @@ export const adminControlledQuizHandler = (io, socket) => {
 
     //------------------------------------7th Handler----------------------------------//
     //-------------------------------------End Quiz------------------------------------//
-  socket.on("endQuizByAdmin", async ({ presentationId }) => {
-    try {
-        const sessionKey = `quiz:${presentationId}`;
+    socket.on("endQuizByAdmin", async ({ presentationId, accessToken }) => {
+        if (!presentationId || !accessToken) {
+            socket.emit("error", { message: "presentationId or accessToken are required" });
+            return;
+        }
 
-        // 1) Flush responses from Redis
-        const responsesArr = await redis.lrange(`responses:${presentationId}`, 0, -1);
-        if (responsesArr.length > 0) {
-            const parsedResponses = responsesArr.map(r => JSON.parse(r));
+        const decodedToken = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
 
-            // 2) Insert into QuestionResponse collection
-            const responseDocs = parsedResponses.map(r => ({
-                sessionId: presentationId, // still storing quizId here (not _id of Session doc, adjust if needed)
-                questionIndex: r.questionIndex,
-                userId: r.userId || null,
-                optionId: r.optionIndex !== undefined ? r.optionIndex : null,
-                textAnswer: r.textAnswer || null,
-            }));
-            await questionResponses.insertMany(responseDocs);
+        if (!decodedToken) {
+            return res.status(401).json({ message: "Invalid Token!" });
+        }
 
-            // 3) Update Session aggregated results (use plain object)
-            const session = await Session.findOne({ quizId: presentationId });
-            if (session) {
-                parsedResponses.forEach(r => {
-                    const qKey = String(r.questionIndex); // store as string keys for safety
+        const { id } = decodedToken;
 
-                    if (!session.results[qKey]) {
-                        session.results[qKey] = {}; // initialize question-level object
-                    }
+        const presentation = await presentationModel.findById(presentationId);
+        if (!presentation) {
+            socket.emit("error", { message: "Presentation not found!" });
+            return;
+        }
 
-                    const optKey = r.optionIndex !== undefined ? String(r.optionIndex) : "text";
+        const isOwner = presentation.user == id;
+        const isAddedAdmin = presentation.addedAdmin.find(user => user.userId == id);
 
-                    session.results[qKey][optKey] =
-                        (session.results[qKey][optKey] || 0) + 1;
-                });
 
-                await session.save();
+        if (!isOwner && !isAddedAdmin) {
+            socket.emit("unauthorized", { message: "You are not the Admin!" });
+            return;
+        }
+
+
+        try {
+            const sessionKey = `quiz:${presentationId}`;
+
+            // 1) Flush responses from Redis
+            const responsesArr = await redis.lrange(`responses:${presentationId}`, 0, -1);
+            if (responsesArr.length > 0) {
+                const parsedResponses = responsesArr.map(r => JSON.parse(r));
+
+                // 2) Insert into QuestionResponse collection
+                const responseDocs = parsedResponses.map(r => ({
+                    sessionId: presentationId, // still storing quizId here (not _id of Session doc, adjust if needed)
+                    questionIndex: r.questionIndex,
+                    userId: r.userId || null,
+                    optionId: r.optionIndex !== undefined ? r.optionIndex : null,
+                    textAnswer: r.textAnswer || null,
+                }));
+                await questionResponses.insertMany(responseDocs);
+
+                // 3) Update Session aggregated results (use plain object)
+                const session = await Session.findOne({ quizId: presentationId });
+                if (session) {
+                    parsedResponses.forEach(r => {
+                        const qKey = String(r.questionIndex); // store as string keys for safety
+
+                        if (!session.results[qKey]) {
+                            session.results[qKey] = {}; // initialize question-level object
+                        }
+
+                        const optKey = r.optionIndex !== undefined ? String(r.optionIndex) : "text";
+
+                        session.results[qKey][optKey] =
+                            (session.results[qKey][optKey] || 0) + 1;
+                    });
+
+                    await session.save();
+                }
             }
+
+            // 4) End session
+            await Session.updateOne(
+                { quizId: presentationId },
+                { status: "ended", endedAt: new Date() }
+            );
+
+            // Clean redis
+            await redis.del(sessionKey);
+            await redis.del(`responses:${presentationId}`);
+
+            // Move comments
+            const commentKey = `quiz:${presentationId}:comments`;
+            const commentsArr = await redis.lrange(commentKey, 0, -1);
+            if (commentsArr.length > 0) {
+                const parsedComments = commentsArr.map(c => JSON.parse(c));
+                await CommentModel.insertMany(parsedComments);
+            }
+            await redis.del(commentKey);
+
+            const participantKey = `quiz:${presentationId}:participants`;
+            await redis.del(participantKey);
+            // Emit end to clients
+            socket.emit("quizEnded", "Quiz is ended");
+            io.of("/adminControlledQuiz").in(presentationId).emit("quizEnded", "Quiz is ended");
+
+        } catch (err) {
+            console.error("Error ending quiz:", err);
+            socket.emit("error", { message: "Failed to end quiz" });
         }
-
-        // 4) End session
-        await Session.updateOne(
-            { quizId: presentationId },
-            { status: "ended", endedAt: new Date() }
-        );
-
-        // Clean redis
-        await redis.del(sessionKey);
-        await redis.del(`responses:${presentationId}`);
-
-        // Move comments
-        const commentKey = `quiz:${presentationId}:comments`;
-        const commentsArr = await redis.lrange(commentKey, 0, -1);
-        if (commentsArr.length > 0) {
-            const parsedComments = commentsArr.map(c => JSON.parse(c));
-            await CommentModel.insertMany(parsedComments);
-        }
-        await redis.del(commentKey);
-
-        const participantKey = `quiz:${presentationId}:participants`;
-        await redis.del(participantKey);
-        // Emit end to clients
-        socket.emit("quizEnded", "Quiz is ended");
-        io.of("/adminControlledQuiz").in(presentationId).emit("quizEnded", "Quiz is ended");
-
-    } catch (err) {
-        console.error("Error ending quiz:", err);
-        socket.emit("error", { message: "Failed to end quiz" });
-    }
-});
+    });
 
 
 

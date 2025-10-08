@@ -604,3 +604,33 @@ export const addDescription = async (req, res) => {
     return res.status(500).json({ message: "Error while saving description!" });
   }
 }
+
+
+//for sharing presentation : 
+export const sharePresentation = async (req, res) => {
+  const { userId } = req.body;
+  if(!userId)
+    return res.status(404).json({message : "User Id not found!"});
+
+  try{
+    const user = await userModel.findById(userId);
+    if(!user)
+      return res.status(404).json({message : "User not found!"});
+
+    const presentations = await presentationModel.find({
+      "addedAdmin.userId": userId
+    });
+
+
+    console.log(presentations)
+    if(!presentations){
+      return res.status(404).json({message : "No presentation found!"});
+    }
+
+    return res.status(200).json({message : "Presentations found!", presentations});
+  }
+  catch(e){
+    console.log("error in sharing presentation!", e);
+    return res.status(500).json({message : "Error in sharing presentation!"});
+  }
+}

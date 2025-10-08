@@ -1,7 +1,8 @@
 import express from "express"
-import {createPresentation, addQuestion, searchQuestion, GetPresentation, updatePresentationName, deletePresenation, updateOptionColor, updateOptionText, updateQuestion, deleteOptions, addOption, changeTemplate, AddAdmin, deleteAddedAdmin, updateQuestionImage, addDescription, addCorrectOption, deleteQuestionImage, deleteSlide} from "../Controller/handleRouteController/handleController.js"
+import {createPresentation, addQuestion, searchQuestion, GetPresentation, updatePresentationName, deletePresenation, updateOptionColor, updateOptionText, updateQuestion, deleteOptions, addOption, changeTemplate, AddAdmin, deleteAddedAdmin, updateQuestionImage, addDescription, addCorrectOption, deleteQuestionImage, deleteSlide, sharePresentation} from "../Controller/handleRouteController/handleController.js"
 import {checkRole} from "../MiddleWare/requiredRole.js"
 import { upload } from "../Config/multer.js";
+import { accessingPresentation } from "../MiddleWare/AccessingPresentation.js";
 
 const handleRouter = express.Router();
 
@@ -40,7 +41,7 @@ handleRouter.delete("/deleteImage", deleteQuestionImage)
 
 handleRouter.patch("/presentation/editTitle" , updatePresentationName);
 
-handleRouter.post("/searchQuestion",searchQuestion); // for searching question
+handleRouter.post("/searchQuestion", accessingPresentation, searchQuestion); // for searching question
 handleRouter.post("/GetPresentations", GetPresentation);
 handleRouter.post("/editDesignTemplate", changeTemplate);
 
@@ -48,6 +49,7 @@ handleRouter.delete("/DeletePresenation", deletePresenation);
 
 handleRouter.post("/AddAdmin", AddAdmin);
 handleRouter.post("/DeleteAddedAdmin", deleteAddedAdmin);
+handleRouter.post("/getSharedPresentations", sharePresentation)
 
 
 export {handleRouter}
