@@ -293,7 +293,7 @@ export const updateQuestionImage = async (req, res) => {
       return res.status(404).json({ message: "Question not found!" });
 
 
-    question.Image = `http://localhost:9000/uploads/${req.file.filename}`;
+    question.Image = `https://ai-based-quiz-builder-quizfy-backend.onrender.com/uploads/${req.file.filename}`;
     await question.save();
 
     return res.status(200).json({ messsage: "Image uploaded Successfully!", question });
@@ -320,9 +320,9 @@ export const deleteQuestionImage = async (req, res) => {
       return res.status(200).json({ message: "Image Deleted Successfully!" });
 
     if (question.Image) {
-      const filePath = path.join("upload", question.Image.replace("http://localhost:9000/", ""));
+      const filePath = path.join("upload", question.Image.replace("https://ai-based-quiz-builder-quizfy-backend.onrender.com/", ""));
       if (fs.existsSync(filePath))
-        fs.unlinkSycn(filePath);
+        fs.unlinkSync(filePath);
     }
 
     question.Image = null;
