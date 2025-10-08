@@ -90,7 +90,7 @@ export async function handleLogin(req, res) {
 
 export async function handleReGenerationAccessToken(req, res) {
     const refreshToken = req.cookies?.refreshToken;
-    console.log(refreshToken, "From here");
+    console.log(refreshToken, "From Handle Regeneration Access Token");
 
     if (!refreshToken) {
         console.log("Token not Found");
