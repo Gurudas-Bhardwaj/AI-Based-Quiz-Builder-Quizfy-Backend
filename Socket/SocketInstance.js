@@ -4,12 +4,17 @@ import { createAdapter } from "@socket.io/redis-adapter"; // ✅ correct one
 import { createClient } from "redis";                      // ✅ proper Redis client
 import { adminControlledQuizHandler } from "./Admin Controlled/handler.js";
 import { userControlledQuizHandler } from "./User Controlled/handler.js";
+
 let io;
+const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+
 
 export const initSocket = async (server) => {
     if (io) return io;
 
-    const pubClient = createClient({ url: "redis://localhost:6379" });
+    const pubClient = createClient({ 
+        url: redisUrl,
+     });
     const subClient = pubClient.duplicate();
 
     await pubClient.connect();

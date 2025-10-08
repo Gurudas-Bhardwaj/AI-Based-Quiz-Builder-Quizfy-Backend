@@ -15,8 +15,11 @@ dotenv.config({ path: '.././secret.env' });
 
 const app = express();
 
+const port = process.env.PORT || 9000;
+const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: allowedOrigin,
   credentials: true,
 }));
 app.use(cookieParser());
@@ -29,7 +32,7 @@ const server = http.createServer(app);
 
 initSocket(server);
 
-connection("mongodb+srv://Gurudas_9811:Radhasoami9811@quizfycluster.odpmhss.mongodb.net/Quiz?retryWrites=true&w=majority&appName=QuizfyCluster")
+connection(process.env.MONGO_DB_URL)
   .then(() => console.log("Connected Successfully!"))
   .catch((err) => console.log("Error: ", err));
 
@@ -38,6 +41,6 @@ app.use("/user/",userRouter);
 app.use("/handleQuestions/",handleRouter);
 
 
-server.listen(9000, () => {
+server.listen(port, () => {
     console.log("Server started on port 9000!");
 });
