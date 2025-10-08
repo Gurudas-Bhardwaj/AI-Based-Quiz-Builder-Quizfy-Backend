@@ -16,7 +16,11 @@ dotenv.config();
 const app = express();
 
 const port = process.env.PORT || 9000;
-const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+const allowedOrigin = [
+  'http://localhost:5173',  // your dev server
+  'http://localhost:3000',  // your build test server
+  'https://your-frontend-on-render.com'  // your deployed frontend
+];
 
 app.use(cors({
   origin: allowedOrigin,
