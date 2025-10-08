@@ -9,7 +9,7 @@ export async function HandleSignUp(req, res) {
     console.log(name, email, password);
 
     //checking all field have data
-    if (!name || !email || !password ) return res.status(400).json({ Message: "Fill all fields!" });
+    if (!name || !email || !password) return res.status(400).json({ Message: "Fill all fields!" });
 
     //checking email end with valid syntax
     if (!email.toLowerCase().endsWith('@gmail.com')) return res.status(400).json({ Message: "Enter a Valid Email" })
@@ -71,11 +71,12 @@ export async function handleLogin(req, res) {
 
         //setting refresh token as http only cokkie for security purpose :  
         res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: false, // only over HTTPS
-            sameSite: "Lax",
+            httpOnly: true,       // cannot be accessed by JS
+            secure: true,         // ✅ required for HTTPS (Render)
+            sameSite: "none",     // ✅ allows cross-origin request
             maxAge: 20 * 24 * 60 * 60 * 1000, // 20 days
         });
+
 
         return res.status(202).json({
             Message: "Successfully Logged in!",
