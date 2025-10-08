@@ -3,6 +3,7 @@ import { questionModel } from "../../Models/Presentation/Question/QuestionModel.
 import { userModel } from "../../Models/UserModel.js";
 import fs from "fs";
 import path from "path";
+import { v2 as cloudinary } from "cloudinary";
 
 
 
@@ -280,61 +281,69 @@ export const updatePresentationName = async (req, res) => {
 export const updateQuestionImage = async (req, res) => {
   const { questionId } = req.body;
 
+  // Validation
   if (!questionId)
-    return res.status(404).json({ message: "Question ID not found!" });
+    return res.status(400).json({ message: "Question ID not provided!" });
 
-  if (!req.file) {
-    return res.status(404).json({ message: "Image file not found!" })
-  }
+  if (!req.file)
+    return res.status(400).json({ message: "No image file received!" });
 
   try {
     const question = await questionModel.findById(questionId);
     if (!question)
       return res.status(404).json({ message: "Question not found!" });
 
+    // ✅ Cloudinary gives you the hosted image URL at req.file.path
+    question.Image = req.file.path;
 
-    question.Image = `https://ai-based-quiz-builder-quizfy-backend.onrender.com/uploads/${req.file.filename}`;
     await question.save();
 
-    return res.status(200).json({ messsage: "Image uploaded Successfully!", question });
+    return res.status(200).json({
+      message: "Image uploaded successfully!",
+      imageUrl: question.Image,
+      question,
+    });
+  } catch (error) {
+    console.error("❌ Error while saving image:", error);
+    return res.status(500).json({ message: "Unexpected error occurred!" });
   }
-  catch (e) {
-    console.log("Error while saving image : ", e);
-    return res.status(500).json({ message: "Unexepected Error occured!" });
-  }
-}
+};
 
 export const deleteQuestionImage = async (req, res) => {
   const { questionId } = req.body;
 
-  if (!questionId)
-    return res.status(404).json({ message: "Question Id is not defined! " });
-
+  if (!questionId) {
+    return res.status(400).json({ message: "Question ID is required!" });
+  }
 
   try {
     const question = await questionModel.findById(questionId);
-    if (!question)
-      return res.status(404).json({ message: "Question not Found!" });
-
-    if (question.Image == null)
-      return res.status(200).json({ message: "Image Deleted Successfully!" });
-
-    if (question.Image) {
-      const filePath = path.join("upload", question.Image.replace("https://ai-based-quiz-builder-quizfy-backend.onrender.com/", ""));
-      if (fs.existsSync(filePath))
-        fs.unlinkSync(filePath);
+    if (!question) {
+      return res.status(404).json({ message: "Question not found!" });
     }
 
+    // If no image is associated
+    if (!question.Image) {
+      return res.status(200).json({ message: "No image to delete!" });
+    }
+
+    const imageUrl = question.Image;
+    const publicId = imageUrl.split("/").slice(-2).join("/").replace(/\.[^/.]+$/, ""); 
+
+    // ✅ Delete from Cloudinary
+    await cloudinary.uploader.destroy(publicId);
+
+    // ✅ Remove image reference from DB
     question.Image = null;
     await question.save();
 
-    return res.status(200).json({ message: "Image deleted Successfully!" });
+    return res.status(200).json({ message: "Image deleted successfully!" });
+  } catch (error) {
+    console.error("❌ Error while deleting image:", error);
+    return res.status(500).json({ message: "Error while deleting image!" });
   }
-  catch (e) {
-    console.log("Error while deleting image!");
-    return res.status(500).json({ message: "Error while deleting image" });
-  }
-}
+};
+
 
 
 //This is for deleting presentation and question related to presentation 

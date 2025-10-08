@@ -6,7 +6,7 @@ import { adminControlledQuizHandler } from "./Admin Controlled/handler.js";
 import { userControlledQuizHandler } from "./User Controlled/handler.js";
 
 let io;
-const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+const redisUrl = "rediss://default:ARVUAAImcDJkMGNjNmE0YmVmYzI0NWM3YWFlY2U3ODFiOGQ2YmY5OXAyNTQ2MA@cool-prawn-5460.upstash.io:6379";
 
 
 export const initSocket = async (server) => {
