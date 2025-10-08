@@ -124,12 +124,13 @@ export async function handleLogout(req, res) {
     const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
-        return res.status(204).json({ message: "No refresh token found" }); // No content to send back
+        return res.status(200).json({ message: "No refresh token found" });
     }
 
     res.clearCookie("refreshToken", {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === "production", // secure in prod
+        sameSite: "Lax",
     });
 
     return res.status(200).json({ message: "Logged out successfully" });
