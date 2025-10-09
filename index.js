@@ -12,6 +12,7 @@ import { v2 as cloudinary } from "cloudinary";
 
 import dotenv from 'dotenv';
 import path from "path";
+import { otherRouter } from "./Router/otherRoute.js";
 dotenv.config({path: '.env'});
 
 
@@ -51,6 +52,11 @@ connection("mongodb+srv://Gurudas_9811:Radhasoami9811@quizfycluster.odpmhss.mong
 
 app.use("/user/",userRouter);
 app.use("/handleQuestions/",handleRouter);
+app.use("/other/", otherRouter);
+
+app.get("/ping", (req, res)=>{
+      return res.status(200).json("Pong");
+});
 
 
 server.listen(port, () => {
