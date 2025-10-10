@@ -25,6 +25,7 @@ export async function createPresentation(req, res) {
     const response = await presentationModel.create({
       user: user,
       title: title,
+      owner : userDetail.name || "User",
     })
 
     return res.status(200).json({ Message: "Presentation Created Successfully!", presentationId: response._id, response });

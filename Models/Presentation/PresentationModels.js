@@ -6,6 +6,10 @@ const presentationSchema = new mongoose.Schema({
         ref: "userModel",
         required: true,
     },
+    owner : {
+        type : String,
+        default : "User",
+    },
     title: {
         type: String,
         required: true,

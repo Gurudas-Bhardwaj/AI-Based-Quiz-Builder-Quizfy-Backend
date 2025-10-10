@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 
-
-const reportBugSchema = new mongoose.Schema({
+const reviewSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "userModel",
@@ -11,7 +10,13 @@ const reportBugSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    details: {
+    rating: {
+        type: Number,
+        min: 1,
+        max: 5,
+        required: true,
+    },
+    comment: {
         type: String,
         required: true,
     },
@@ -19,7 +24,7 @@ const reportBugSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-})
+});
 
-const reportBugModel = mongoose.model("reportBugModel", reportBugSchema);
-export default reportBugModel;
+const reviewModel = mongoose.model("reviewModel", reviewSchema);
+export default reviewModel;
